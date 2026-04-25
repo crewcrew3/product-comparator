@@ -1,0 +1,101 @@
+﻿Model,Criterion,Test_ID,Run,Passed,Duration_sec,Response
+gemma4:e2b,Format,F1,1,True,17.48,"{""intent"": ""compare"", ""products"": [""iPhone"", ""Pixel""]}"
+gemma4:e2b,Format,F1,2,True,18.15,"{""intent"": ""compare"", ""products"": [""iPhone"", ""Pixel""]}"
+gemma4:e2b,Format,F2,1,True,15.23,"{""status"": ""success"", ""count"": 2}"
+gemma4:e2b,Format,F2,2,True,14.62,"{""status"": ""success"", ""count"": 2}"
+gemma4:e2b,Hallucination,H1,1,True,13.63,нет данных
+gemma4:e2b,Hallucination,H1,2,True,13.71,нет данных
+gemma4:e2b,Hallucination,H2,1,True,2.92,нет данных
+gemma4:e2b,Hallucination,H2,2,True,2.51,нет данных
+gemma4:e2b,Instruction,I1,1,True,11.88,48
+gemma4:e2b,Instruction,I1,2,True,11.38,48
+gemma4:e2b,Instruction,I2,1,True,11.34,Samsung
+gemma4:e2b,Instruction,I2,2,True,11.0,Samsung
+gemma4:e2b,Logic,L1,1,True,12.24,Выгодно
+gemma4:e2b,Logic,L1,2,True,11.31,Выгодно
+gemma4:e2b,Logic,L2,1,True,10.74,Рекомендуем
+gemma4:e2b,Logic,L2,2,True,10.51,Рекомендуем
+gemma4:e2b,Classification,C1,1,True,2.96,wishlist
+gemma4:e2b,Classification,C1,2,True,2.54,wishlist
+gemma4:e2b,Classification,C2,1,True,16.39,none
+gemma4:e2b,Classification,C2,2,True,14.52,none
+gemma4:e2b,Explainability,E1,1,True,26.1,"{""choice"": ""B"", ""reason"": ""Вариант Б является более экономичным, так как он стоит дешевле и потребляет меньше энергии.""}"
+gemma4:e2b,Explainability,E1,2,True,27.53,"{""choice"": ""B"", ""reason"": ""Вариант Б является более экономичным, так как он дешевле и потребляет меньше энергии.""}"
+gemma4:e2b,Explainability,E2,1,True,23.34,"{""choice"": ""X"", ""reason"": ""16 ГБ оперативной памяти обеспечивают значительно лучшую производительность и плавность при современных игровых сессиях по сравнению с 8 ГБ.""}"
+gemma4:e2b,Explainability,E2,2,True,23.67,"{""choice"": ""X"", ""reason"": ""16ГБ ОЗУ обеспечивают значительно лучшую производительность для игр по сравнению с 8ГБ ОЗУ.""}"
+qwen2.5:3b,Format,F1,1,True,4.13,"{""intent"": ""compare"", ""products"": [""iPhone"", ""Pixel""]}"
+qwen2.5:3b,Format,F1,2,True,3.16,"{""intent"": ""compare"", ""products"": [""iPhone"", ""Pixel""]}"
+qwen2.5:3b,Format,F2,1,True,3.38,"{""status"": ""success"", ""count"": 2}"
+qwen2.5:3b,Format,F2,2,True,2.96,"{""status"": ""success"", ""count"": 2}"
+qwen2.5:3b,Hallucination,H1,1,True,3.29,нет данных
+qwen2.5:3b,Hallucination,H1,2,True,2.39,нет данных
+qwen2.5:3b,Hallucination,H2,1,True,2.98,нет данных
+qwen2.5:3b,Hallucination,H2,2,True,2.37,нет данных
+qwen2.5:3b,Instruction,I1,1,True,3.12,48
+qwen2.5:3b,Instruction,I1,2,True,2.37,48
+qwen2.5:3b,Instruction,I2,1,True,2.86,Samsung
+qwen2.5:3b,Instruction,I2,2,True,2.32,Samsung
+qwen2.5:3b,Logic,L1,1,True,3.26,Выгодно
+qwen2.5:3b,Logic,L1,2,True,2.43,Выгодно
+qwen2.5:3b,Logic,L2,1,True,3.45,Рекомендуем
+qwen2.5:3b,Logic,L2,2,True,2.61,Рекомендуем
+qwen2.5:3b,Classification,C1,1,True,3.11,wishlist
+qwen2.5:3b,Classification,C1,2,True,2.3,wishlist
+qwen2.5:3b,Classification,C2,1,True,2.68,none
+qwen2.5:3b,Classification,C2,2,True,2.31,none
+qwen2.5:3b,Explainability,E1,1,False,6.19,"{""choice"": ""A"", ""reason"": ""Бattery capacity (40Wh) is higher than battery capacity (35Wh) of option B, which means A can last longer and thus saving more energy.""}"
+qwen2.5:3b,Explainability,E1,2,False,5.71,"{""choice"": ""A"", ""reason"": ""А имеет большую емкость батареи (40Wh) по сравнению с Б (35Wh), что позволяет работать дольше при аналогичном расходе энергии.""}"
+qwen2.5:3b,Explainability,E2,1,True,7.02,"{""choice"": ""X"", ""reason"": ""Ноутбук X имеет больше оперативной памяти (16GB) чем Ноутбук Y (8GB), что обеспечивает лучшую производительность для игр.""}"
+qwen2.5:3b,Explainability,E2,2,True,5.79,"{""choice"": ""X"", ""reason"": ""Ноутбук X имеет больше оперативной памяти (16GB), что обеспечивает лучшую производительность для игр, чем ноутбук Y с 8GB ОЗУ.""}"
+qwen3.5:2b,Format,F1,1,False,30.0,TimeoutError
+qwen3.5:2b,Format,F1,2,False,30.0,TimeoutError
+qwen3.5:2b,Format,F2,1,False,30.0,TimeoutError
+qwen3.5:2b,Format,F2,2,False,30.0,TimeoutError
+qwen3.5:2b,Hallucination,H1,1,True,30.42,нет данных
+qwen3.5:2b,Hallucination,H1,2,False,30.0,TimeoutError
+qwen3.5:2b,Hallucination,H2,1,True,32.08,нет данных
+qwen3.5:2b,Hallucination,H2,2,False,30.0,TimeoutError
+qwen3.5:2b,Instruction,I1,1,True,20.28,48
+qwen3.5:2b,Instruction,I1,2,True,18.98,48
+qwen3.5:2b,Instruction,I2,1,True,28.85,Samsung
+qwen3.5:2b,Instruction,I2,2,True,24.08,Samsung
+qwen3.5:2b,Logic,L1,1,True,27.53,Выгодно
+qwen3.5:2b,Logic,L1,2,False,30.0,TimeoutError
+qwen3.5:2b,Logic,L2,1,True,25.94,Рекомендуем
+qwen3.5:2b,Logic,L2,2,False,30.0,TimeoutError
+qwen3.5:2b,Classification,C1,1,False,30.0,TimeoutError
+qwen3.5:2b,Classification,C1,2,False,30.0,TimeoutError
+qwen3.5:2b,Classification,C2,1,False,30.0,TimeoutError
+qwen3.5:2b,Classification,C2,2,False,30.0,TimeoutError
+qwen3.5:2b,Explainability,E1,1,False,30.0,TimeoutError
+qwen3.5:2b,Explainability,E1,2,False,30.0,TimeoutError
+qwen3.5:2b,Explainability,E2,1,False,30.0,TimeoutError
+qwen3.5:2b,Explainability,E2,2,False,30.0,TimeoutError
+gemma3:4b,Format,F1,1,False,5.01,"```json | {""intent"": ""compare"", ""products"": [""iPhone"", ""Pixel""]} | ```"
+gemma3:4b,Format,F1,2,False,4.15,"```json | {""intent"": ""compare"", ""products"": [""iPhone"", ""Pixel""]} | ```"
+gemma3:4b,Format,F2,1,False,4.3,"```json | {""status"": ""success"", ""count"": 2} | ```"
+gemma3:4b,Format,F2,2,False,3.88,"```json | {""status"": ""success"", ""count"": 2} | ```"
+gemma3:4b,Hallucination,H1,1,True,3.45,нет данных
+gemma3:4b,Hallucination,H1,2,True,2.6,нет данных
+gemma3:4b,Hallucination,H2,1,True,3.28,нет данных
+gemma3:4b,Hallucination,H2,2,True,2.68,нет данных
+gemma3:4b,Instruction,I1,1,True,3.39,48
+gemma3:4b,Instruction,I1,2,True,2.68,48
+gemma3:4b,Instruction,I2,1,True,3.02,Samsung
+gemma3:4b,Instruction,I2,2,True,2.51,Samsung
+gemma3:4b,Logic,L1,1,True,3.41,Выгодно
+gemma3:4b,Logic,L1,2,True,2.63,Выгодно
+gemma3:4b,Logic,L2,1,True,3.47,Рекомендуем
+gemma3:4b,Logic,L2,2,True,2.77,Рекомендуем
+gemma3:4b,Classification,C1,1,True,3.36,Wishlist
+gemma3:4b,Classification,C1,2,True,2.68,Wishlist
+gemma3:4b,Classification,C2,1,False,2.96,compare
+gemma3:4b,Classification,C2,2,False,2.6,compare
+gemma3:4b,Explainability,E1,1,False,5.88,"```json | {""choice"": ""B"", ""reason"": ""Б имеет большую емкость при меньшем размере.""} | ```"
+gemma3:4b,Explainability,E1,2,False,4.58,"```json | {""choice"": ""B"", ""reason"": ""Б имеет большую емкость при меньшем размере.""} | ```"
+gemma3:4b,Explainability,E2,1,False,8.29,"```json | {""choice"": ""X"", ""reason"": ""Ноутбук X с 16 ГБ ОЗУ обеспечит лучшую производительность в играх, чем ноутбук Y с 8 ГБ ОЗУ.""} | ```"
+gemma3:4b,Explainability,E2,2,False,6.64,"```json | {""choice"": ""X"", ""reason"": ""Ноутбук X с 16 ГБ ОЗУ обеспечивает лучшую производительность в играх, чем ноутбук Y с 8 ГБ ОЗУ.""} | ```"
+gemma3:4b,SUMMARY,AVG,ALL,0.583,3.0,"Success:58.3%, Time:3.0s"
+gemma4:e2b,SUMMARY,AVG,ALL,1.0,13.57,"Success:100.0%, Time:13.57s"
+qwen2.5:3b,SUMMARY,AVG,ALL,0.917,3.2,"Success:91.7%, Time:3.2s"
+qwen3.5:2b,SUMMARY,AVG,ALL,0.33299999999999996,26.02,"Success:33.3%, Time:26.02s"

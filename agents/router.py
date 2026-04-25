@@ -1,0 +1,292 @@
+"""
+Агент Router (Маршрутизатор) для Product Comparison Assistant.
+
+Отвечает за:
+- Классификацию намерения пользователя (intent)
+- Извлечение названий товаров из запроса
+- Парсинг параметров для обновления предпочтений
+- Возврат строго структурированного JSON для дальнейшей обработки
+
+Не выполняет никаких действий с файлами или базой знаний — только анализ текста.
+"""
+
+import json
+import re
+from typing import Dict, Any, Optional
+from langchain_ollama import ChatOllama
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.messages import HumanMessage
+
+from config.prompts import load_prompts
+from tools import load_user_preferences, update_user_preferences
+
+OLLAMA_MODEL = "qwen2.5:3b"
+# OLLAMA_BASE_URL = "http://host.docker.internal:11434"
+OLLAMA_BASE_URL = "http://localhost:11434"
+OLLAMA_TEMPERATURE = 0.1  # Низкая температура для детерминированного вывода
+OLLAMA_FORMAT = "json"  # Требование строгого JSON-вывода
+
+
+def create_router_llm() -> ChatOllama:
+    return ChatOllama(
+        model=OLLAMA_MODEL,
+        base_url=OLLAMA_BASE_URL,
+        temperature=OLLAMA_TEMPERATURE,
+        format=OLLAMA_FORMAT,  # Включает режим строгого JSON
+        num_ctx=4096,  # Размер контекстного окна
+        keep_alive="0s"
+    )
+
+
+def create_router_prompt(system_prompt: str) -> ChatPromptTemplate:
+    """
+    Создаёт шаблон промпта для Router.
+    
+    Args:
+        system_prompt: Системная инструкция из prompts.yaml
+    
+    Returns:
+        Настроенный ChatPromptTemplate
+    """
+    return ChatPromptTemplate.from_messages([
+        ("system", system_prompt),
+        ("human", "{user_input}"),
+    ])
+
+
+# Основная функция агента
+def run_router(state: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Главный входной пункт агента Router.
+    
+    Анализирует пользовательский запрос, определяет намерение и извлекает данные.
+    
+    Args:
+        state: Словарь состояния с ключами:
+            - user_input: str, исходный запрос пользователя
+    
+    Returns:
+        Обновлённый state с добавленными полями:
+            - parsed_intent: str, распознанное намерение
+            - product_names: List[str], извлечённые названия товаров
+            - parsed_params: Dict, параметры для update_prefs
+            - router_error: Optional[str], код ошибки если есть
+            - router_error_message: Optional[str], сообщение для пользователя если есть
+    """
+    # Извлекаем входные данные из состояния
+    user_input = state.get("user_input", "").strip()
+    
+    if not user_input:
+        return {
+            "parsed_intent": "unknown",
+            "product_names": [],
+            "parsed_params": {},
+            "router_error": "empty_input",
+            "router_error_message": "Пожалуйста, введите запрос.",
+        }
+    
+    # Загружаем промпты
+    prompts = load_prompts()
+    system_prompt = prompts.get("router", {}).get("system", "")
+    
+    if not system_prompt:
+        system_prompt = "Ты — маршрутизатор. Определи намерение пользователя и верни JSON."
+    
+    # LangChain парсит {} как переменные. JSON-примеры в промпте ломают парсер.
+    # Заменяем { на {{ и } на }}, чтобы они воспринимались какliteral текст.
+    system_prompt = system_prompt.replace("{", "{{").replace("}", "}}")
+    
+    llm = create_router_llm()
+    prompt = create_router_prompt(system_prompt)
+    
+    # Передай вывод первого компонента на вход второму
+    chain = prompt | llm
+    
+    # Выполняем запрос к модели
+    try:
+        response = chain.invoke({
+            "user_input": user_input,
+        })
+        
+        # Извлекаем текст ответа
+        response_content = response.content.strip()
+        
+        # Парсим JSON-ответ
+        parsed_response = parse_router_response(response_content)
+        
+    except Exception as e:
+        # Обработка ошибок подключения или выполнения LLM
+        parsed_response = {
+            "intent": "unknown",
+            "product_names": [],
+            "parsed_params": {},
+            "error": "llm_error",
+            "error_message": f"Ошибка обработки запроса: {str(e)}"
+        }
+    
+    if parsed_response.get("error"):
+        return {
+            "parsed_intent": "unknown",
+            "product_names": parsed_response.get("product_names", []),
+            "parsed_params": {},
+            "router_error": parsed_response["error"],
+            "router_error_message": parsed_response.get("error_message", "Произошла ошибка при анализе запроса."),
+        }
+    
+    # Обработка намерения update_prefs
+    if parsed_response["intent"] == "update_prefs":
+        prefs_result = handle_prefs_update(parsed_response.get("parsed_params", {}))
+        
+        if not prefs_result["success"]:
+            return {
+                "parsed_intent": "unknown",
+                "product_names": [],
+                "parsed_params": {},
+                "router_error": "prefs_update_failed",
+                "router_error_message": prefs_result["message"],
+            }
+        
+        return {
+            "parsed_intent": "update_prefs",
+            "product_names": [],
+            "parsed_params": parsed_response.get("parsed_params", {}),
+            "router_error": None,
+            "router_error_message": prefs_result["message"],
+        }
+    
+    # Валидация количества товаров для compare
+    if parsed_response["intent"] in ("compare", "compare_and_export"):
+        product_count = len(parsed_response.get("product_names", []))
+        
+        if product_count != 2:
+            return {
+                "parsed_intent": "unknown",
+                "product_names": parsed_response.get("product_names", []),
+                "parsed_params": {},
+                "router_error": "invalid_product_count",
+                "router_error_message": "Для сравнения укажите ровно 2 товара.",
+            }
+    
+    # Валидация количества товаров для wishlist
+    if parsed_response["intent"] == "wishlist":
+        product_count = len(parsed_response.get("product_names", []))
+        
+        if product_count != 1:
+            return {
+                "parsed_intent": "unknown",
+                "product_names": parsed_response.get("product_names", []),
+                "parsed_params": {},
+                "router_error": "invalid_wishlist_product_count",
+                "router_error_message": "Для добавления в вишлист укажите ровно 1 товар.",
+            }
+    
+    # Успешный результат
+    return {
+        "parsed_intent": parsed_response["intent"],
+        "product_names": parsed_response.get("product_names", []),
+        "parsed_params": parsed_response.get("parsed_params", {}),
+        "router_error": None,
+        "router_error_message": None,
+    }
+
+# Вспомогательные функции
+def parse_router_response(response_text: str) -> Dict[str, Any]:
+    """
+    Парсит ответ LLM в словарь.
+    
+    Args:
+        response_text: Сырой текст ответа от модели
+    
+    Returns:
+        Словарь с полями intent, product_names, parsed_params, error, error_message
+    """
+    # Очистка от markdown-форматирования (если модель добавила ```json ... ```)
+    cleaned = response_text.strip()
+    if cleaned.startswith("```json"):
+        cleaned = cleaned[7:]
+    if cleaned.startswith("```"):
+        cleaned = cleaned[3:]
+    if cleaned.endswith("```"):
+        cleaned = cleaned[:-3]
+    cleaned = cleaned.strip()
+    
+    # Дефолтное значение на случай парсинг-ошибки
+    default_result = {
+        "intent": "unknown",
+        "product_names": [],
+        "parsed_params": {},
+        "error": "parse_error",
+        "error_message": "Не удалось распознать формат ответа."
+    }
+    
+    try:
+        parsed = json.loads(cleaned)
+        
+        # Валидация обязательных полей
+        required_fields = ["intent", "product_names", "parsed_params", "error", "error_message"]
+        for field in required_fields:
+            if field not in parsed:
+                parsed[field] = default_result[field]
+        
+        # Нормализация типов
+        if not isinstance(parsed["product_names"], list):
+            parsed["product_names"] = []
+        if not isinstance(parsed["parsed_params"], dict):
+            parsed["parsed_params"] = {}
+        
+        return parsed
+        
+    except json.JSONDecodeError as e:
+        print(f"JSON parse error: {e}")
+        print(f"Response text: {response_text[:200]}...")
+        return default_result
+
+
+def handle_prefs_update(params: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Обрабатывает обновление предпочтений через tools.preferences.
+    
+    Args:
+        params: Словарь параметров из Router (parsed_params)
+    
+    Returns:
+        Словарь с результатом: {"success": bool, "message": str}
+    """
+    if not params:
+        return {"success": False, "message": "Не указаны параметры для обновления."}
+    
+    # Вызываем функцию из tools.preferences
+    result = update_user_preferences(params)
+    
+    return {
+        "success": result.get("success", False),
+        "message": result.get("message", "Неизвестная ошибка")
+    }
+
+# Функция для отладки (запуск напрямую)
+if __name__ == "__main__":
+    # Тестовые запросы для проверки работы Router
+    test_queries = [
+        "Сравни iPhone 15 и Samsung S24",
+        "Сравни ноутбуки ASUS и Lenovo, сохрани результат в файл",
+        "Добавь iPhone 15 в вишлист",
+        "Установи бюджет 50000 рублей",
+        "Добавь предпочитаемый бренд: Samsung и Apple",
+        "Приоритет: камера > память > батарея",
+        "Сбросить настройки",
+        "Привет, как дела?",
+        "Что лучше?",
+        "Сравни ноутбук ASUS, Lenovo и HP",
+    ]
+    
+    for query in test_queries:
+        print(f"Запрос: {query}")
+        state = {"user_input": query}
+        result = run_router(state)
+        
+        print(f"  intent: {result['parsed_intent']}")
+        print(f"  products: {result['product_names']}")
+        print(f"  params: {result['parsed_params']}")
+        print(f"  error: {result['router_error']}")
+        print(f"  message: {result['router_error_message']}")
+        print()

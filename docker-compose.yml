@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  agent: # имя сервиса
+    
+    build: . # сборка образа в текущей папке
+    
+    container_name: product-comparator-agent
+    
+    # монтирование папок
+    volumes:
+      # Пользовательские данные (сохраняются между запусками)
+      - ./data:/app/data
+      # Логи для отладки (создадутся автоматически)
+      - ./logs:/app/logs
+    
+    # переменные окружения
+    environment:
+      - OLLAMA_HOST=host.docker.internal:11434
+      - LOG_LEVEL=INFO
+      - USER_PREFS_FILE=/app/data/user_prefs.json
+    
+    # Для доступа к Ollama. говорим контейнеру, что host.docker.internal это localhost нашего ноутбука (host-gateway)
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    
+    # органичение ресурсов 
+    mem_limit: 4g # ОЗУ 4ГБ
+    cpus: 2.0 # Макс 2 ядра цпу
+    pids_limit: 100 # макс 100 процессов
+
+    restart: unless-stopped # не перезапускать агента, если я сама его остановила через docker-compose down
+    
+    # стандартный ввод-вывод для интерактивного режима, если смы хотим вводить команды в агент
+    stdin_open: true
+    tty: true
