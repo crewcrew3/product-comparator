@@ -230,30 +230,3 @@ def handle_prefs_update(params: Dict[str, Any]) -> Dict[str, Any]:
         "success": result.get("success", False),
         "message": result.get("message", "Неизвестная ошибка")
     }
-
-# Функция для отладки (запуск напрямую)
-if __name__ == "__main__":
-    test_queries = [
-        "Сравни iPhone 15 и Samsung S24",
-        "Сравни ноутбуки ASUS и Lenovo, сохрани результат в файл",
-        "Добавь iPhone 15 в вишлист",
-        "Установи бюджет 50000 рублей",
-        "Добавь предпочитаемый бренд: Samsung и Apple",
-        "Приоритет: камера > память > батарея",
-        "Сбросить настройки",
-        "Привет, как дела?",
-        "Что лучше?",
-        "Сравни ноутбук ASUS, Lenovo и HP",
-    ]
-    
-    for query in test_queries:
-        print(f"Запрос: {query}")
-        state = {"user_input": query}
-        result = run_router(state)
-        
-        print(f"  intent: {result['parsed_intent']}")
-        print(f"  products: {result['product_names']}")
-        print(f"  params: {result['parsed_params']}")
-        print(f"  error: {result['router_error']}")
-        print(f"  message: {result['router_error_message']}")
-        print()

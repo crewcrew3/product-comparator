@@ -1,0 +1,24 @@
+user_input,expected_intent,actual_intent,intent_match,expected_products,actual_products,count_match,has_any_error,is_expected_error,is_system_failure,error_type,error_code,task_success,final_output_present,latency_sec,status
+Сравни iPhone 15 и Samsung Galaxy A54,compare,compare,True,2,2,True,False,False,False,,,True,True,162.871,OK
+Сравни ноутбуки ASUS Zenbook 14 и Lenovo IdeaPad Gaming 3,compare,compare,True,2,2,True,False,False,False,,,True,True,176.421,OK
+Добавь iPhone 15 в вишлист,wishlist,wishlist,True,1,1,True,True,True,False,wishlist,already_in_wishlist,True,True,48.799,OK
+Установи бюджет 50000,update_prefs,update_prefs,True,0,0,True,False,False,False,,,True,True,48.57,OK
+Добавь предпочитаемый бренд: Samsung,update_prefs,update_prefs,True,0,0,True,False,False,False,,,True,True,44.28,OK
+Приоритет: камера > память > батарея,update_prefs,update_prefs,True,0,0,True,False,False,False,,,True,True,46.093,OK
+Сбросить настройки,update_prefs,update_prefs,True,0,0,True,False,False,False,,,True,True,43.735,OK
+Сравни телефоны и сохрани результат в файл,unknown,compare_and_export,False,2,2,True,True,True,False,comparator,product_not_found,True,True,44.147,OK
+Сравни iPhone 15 и Samsung Galaxy A54 и сохрани в файл,compare_and_export,compare_and_export,True,2,2,True,False,False,False,,,True,True,180.65,OK
+Привет как дела,unknown,unknown,True,0,0,True,False,False,False,,,True,True,48.817,OK
+Что лучше,unknown,unknown,True,0,0,True,True,True,False,router,invalid_product_count,True,True,43.168,OK
+Сравни iPhone 15 и ASUS Zenbook 14,compare,compare,True,2,2,True,False,False,False,,,True,True,165.218,OK
+Добавь в вишлист iPhone 15 и Samsung Galaxy A54,unknown,unknown,True,0,2,True,True,True,False,router,invalid_wishlist_product_count,True,True,45.824,OK
+Сравни Samsung Galaxy A54 и iPhone 14,compare,compare,True,2,2,True,True,True,False,comparator,product_not_found,True,True,44.441,OK
+
+# SUMMARY
+total_tests,14
+intent_accuracy_pct,92.9
+task_success_rate_pct,100.0
+system_failure_rate_pct,0.0
+valid_responses_pct,100.0
+avg_latency_sec,81.645
+tests_with_output,14
