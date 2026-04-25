@@ -1,5 +1,4 @@
 """
-tools/preferences.py
 Управление предпочтениями пользователя (бюджет, бренды, приоритеты).
 """
 
@@ -7,7 +6,6 @@ from datetime import datetime, timezone
 from typing import Dict, Any
 from .base import USER_PREFS_FILE, load_json_file, save_json_file
 
-# Допустимые поля для обновления предпочтений
 VALID_PREFS_FIELDS = {
     "budget": int,
     "preferred_brands": list,
@@ -17,7 +15,6 @@ VALID_PREFS_FIELDS = {
     "reset": bool
 }
 
-# Допустимые значения для feature_priority
 VALID_FEATURE_PRIORITIES = {
     "battery", "memory", "camera", "price", "display", 
     "processor", "storage", "weight", "rating", "brand"
@@ -40,7 +37,6 @@ DEFAULT_PREFS = {
 
 
 def load_user_preferences() -> Dict[str, Any]:
-    """Загружает предпочтения пользователя из файла."""
     prefs = load_json_file(USER_PREFS_FILE, default={})
     # Гарантируем наличие всех полей
     for key, value in DEFAULT_PREFS.items():
@@ -84,7 +80,6 @@ def normalize_params(params: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def update_user_preferences(params: Dict[str, Any]) -> Dict[str, Any]:
-    """Обновляет предпочтения пользователя."""
     params = normalize_params(params)
     prefs = load_user_preferences()
     

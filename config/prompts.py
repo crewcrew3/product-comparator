@@ -4,7 +4,6 @@ from typing import Dict, Any
 
 PROMPTS_FILE = Path(__file__).parent / "prompts.yaml"
 
-
 def load_prompts() -> Dict[str, Any]:
     """
     Загружает промпты из prompts.yaml.

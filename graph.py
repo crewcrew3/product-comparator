@@ -1,5 +1,4 @@
 """
-graph.py
 Основной файл сборки графа LangGraph.
 Определяет состояние (State), узлы (Nodes) и маршрутизацию (Edges).
 """
@@ -44,19 +43,16 @@ class ProductComparisonState(TypedDict):
 
 # Узлы графа
 def router_node(state: ProductComparisonState) -> Dict[str, Any]:
-    """Обертка для вызова агента Router."""
     result = run_router(state)
     return result
 
 
 def comparator_node(state: ProductComparisonState) -> Dict[str, Any]:
-    """Обертка для вызова агента Comparator."""
     result = run_comparator(state)
     return result
 
 
 def wishlist_agent_node(state: ProductComparisonState) -> Dict[str, Any]:
-    """Обертка для вызова агента Wishlist."""
     result = run_wishlist(state)
     return result
 
@@ -76,7 +72,6 @@ def action_node(state: ProductComparisonState) -> Dict[str, Any]:
             md_content = format_comparison_to_markdown(data)
             table_data = data.get("comparison_table", {})
             
-            # Вызываем инструмент экспорта
             export_report_to_file(
                 table_data=table_data,
                 markdown_content=md_content
@@ -86,7 +81,6 @@ def action_node(state: ProductComparisonState) -> Dict[str, Any]:
     elif intent == "wishlist":
         entry = state.get("wishlist_entry")
         if entry and not state.get("wishlist_error"):
-            # Вызываем инструмент добавления
             add_to_wishlist(entry)
             
     return {}
@@ -97,7 +91,7 @@ def response_node(state: ProductComparisonState) -> Dict[str, Any]:
     Узел формирования финального ответа.
     Собирает все результаты и ошибки в одну строку для вывода пользователю.
     """
-    # 1. Проверка ошибок (приоритет: ошибки важнее результатов)
+    # 1. Проверка ошибок 
     if state.get("router_error"):
         return {"final_output": state.get("router_error_message", "Ошибка маршрутизации")}
         
@@ -148,7 +142,6 @@ def format_comparison_to_markdown(data: Dict[str, Any]) -> str:
         for row in rows:
             lines.append("| " + " | ".join([str(x) for x in row]) + " |")
     
-    # Предупреждения
     warnings = data.get("warnings", [])
     if warnings:
         lines.append("\n**Предупреждения:**")
@@ -161,35 +154,34 @@ def format_comparison_to_markdown(data: Dict[str, Any]) -> str:
 def route_after_router(state: ProductComparisonState) -> str:
     """Решает, куда идти после Router."""
     if state.get("router_error"):
-        return "response"  # Если ошибка ввода -> сразу ответ
+        return "response"  # Если ошибка ввода - сразу ответ
     
     intent = state.get("parsed_intent")
     if intent == "update_prefs":
-        return "response"  # Настройки обновились в Router -> сразу ответ
+        return "response"  # Настройки обновились в Router - сразу ответ
     elif intent in ("compare", "compare_and_export"):
         return "comparator"
     elif intent == "wishlist":
         return "wishlist_agent"
     else:
-        return "response"  # Для unknown и прочих случаев
+        return "response"  # Для прочих случаев
 
 
 def route_after_comparator(state: ProductComparisonState) -> str:
     """Решает, куда идти после Comparator."""
     if state.get("comparator_error"):
-        return "response"  # Ошибка сравнения -> ответ
+        return "response"  # Ошибка сравнения - ответ
     
     intent = state.get("parsed_intent")
     if intent == "compare_and_export":
         return "action"  # Успешно сравнили + нужно экспортировать
     else:
-        return "response"  # Просто сравнили -> ответ
+        return "response"  # Просто сравнили - ответ
 
 
 def route_after_wishlist(state: ProductComparisonState) -> str:
     """Решает, куда идти после WishlistAgent."""
     # Всегда идем в action, чтобы попытаться сохранить в файл
-    # (даже если есть ошибка агента, action_node просто ничего не сделает)
     return "action"
 
 

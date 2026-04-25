@@ -12,13 +12,13 @@ from langchain_core.prompts import ChatPromptTemplate
 from config.prompts import load_prompts
 from tools.knowledge import load_product_specs, format_specs_for_prompt
 from tools.preferences import load_user_preferences
+from tools.base import load_semantic_context
 
 OLLAMA_MODEL = "gemma4:e2b"
 # OLLAMA_BASE_URL = "http://host.docker.internal:11434"
 OLLAMA_BASE_URL = "http://localhost:11434"
 OLLAMA_TEMPERATURE = 0.1
 OLLAMA_FORMAT = "json"
-
 
 def create_comparator_llm() -> ChatOllama:
     return ChatOllama(
@@ -32,10 +32,7 @@ def create_comparator_llm() -> ChatOllama:
 
 
 def run_comparator(state: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Основная функция агента.
-    Читает product_names из state, загружает данные, вызывает LLM, возвращает результат.
-    """
+
     product_names = state.get("product_names", [])
     
     if len(product_names) != 2:
@@ -61,11 +58,14 @@ def run_comparator(state: Dict[str, Any]) -> Dict[str, Any]:
     specs_text_a = format_specs_for_prompt(specs_a)
     specs_text_b = format_specs_for_prompt(specs_b)
 
-    # Загрузка системного промпта
     prompts = load_prompts()
     system_prompt = prompts.get("comparator", {}).get("system", "")
     if not system_prompt:
         system_prompt = "Ты аналитик. Сравни два товара и верни строго JSON."
+    
+    semantic_context = load_semantic_context()
+    if semantic_context:
+        system_prompt += "\n\n## СПРАВОЧНЫЙ КОНТЕКСТ (ДОМЕННЫЕ ЗНАНИЯ)\n" + semantic_context
     
     # Экранирование фигурных скобок для LangChain (JSON-примеры в промпте ломают парсер шаблонов)
     system_prompt = system_prompt.replace("{", "{{").replace("}", "}}")
@@ -108,7 +108,6 @@ def run_comparator(state: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def parse_json_response(text: str) -> Dict[str, Any]:
-    """Парсит ответ LLM, удаляет markdown-обёртки, возвращает словарь."""
     cleaned = text.strip()
     if cleaned.startswith("```json"):
         cleaned = cleaned[7:]

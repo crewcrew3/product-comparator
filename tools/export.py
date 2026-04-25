@@ -1,5 +1,4 @@
 """
-tools/export.py
 Генерация и сохранение отчетов (Markdown и CSV).
 """
 
@@ -7,7 +6,6 @@ import csv
 from datetime import datetime
 from typing import Dict, Any, Optional
 from .base import REPORTS_DIR, ensure_dirs_exist
-
 
 def export_report_as_markdown(content: str, filename: Optional[str] = None) -> Dict[str, Any]:
     ensure_dirs_exist()
@@ -44,7 +42,7 @@ def export_report_as_csv(table_data: Dict[str, Any], filename: Optional[str] = N
 
 def export_report_to_file(table_data: Dict[str, Any], markdown_content: str, filename: Optional[str] = None) -> Dict[str, Any]:
     """
-    Координатор экспорта: сохраняет отчёт в Markdown и CSV с одинаковым базовым именем.
+    Координатор экспорта: сохраняет отчёт и в Markdown, и в CSV с одинаковым базовым именем.
     Делегирует работу специализированным функциям и агрегирует результат.
     """
     ensure_dirs_exist()

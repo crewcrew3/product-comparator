@@ -1,30 +1,36 @@
 """
-tools/base.py
 Базовые утилиты: пути, создание директорий, чтение/запись файлов.
 Используется всеми остальными модулями.
 """
 
-import os
 import json
 import shutil
 from datetime import datetime, timezone
 from typing import Dict, List, Optional, Any
 from pathlib import Path
 
-# Базовые пути (относительно корня проекта)
 BASE_DIR = Path(__file__).parent.parent
 DATA_DIR = BASE_DIR / "data"
 TEMPLATES_DIR = BASE_DIR / "templates"
 KNOWLEDGE_DIR = BASE_DIR / "knowledge"
 REPORTS_DIR = DATA_DIR / "reports"
 
-# Имена файлов
 USER_PREFS_FILE = DATA_DIR / "user_prefs.json"
 WISHLIST_FILE = DATA_DIR / "wishlist.md"
 
-# Шаблоны
 USER_PREFS_TEMPLATE = TEMPLATES_DIR / "user_prefs.json.example"
 WISHLIST_TEMPLATE = TEMPLATES_DIR / "wishlist.md.example"
+
+SEMANTICS_DIR = KNOWLEDGE_DIR / "semantics"
+
+def load_semantic_context() -> str:
+    """Загружает семантические файлы как справочный контекст."""
+    context_parts = []
+    if SEMANTICS_DIR.exists():
+        for md_file in SEMANTICS_DIR.glob("*.md"):
+            with open(md_file, "r", encoding="utf-8") as f:
+                context_parts.append(f.read())
+    return "\n\n".join(context_parts) if context_parts else ""
 
 
 def ensure_dirs_exist() -> None:
@@ -78,33 +84,25 @@ def append_to_markdown_file(filepath: Path, content: str) -> bool:
         print(f"Error appending to {filepath}: {e}")
         return False
 
-
-# Инициализация данных из шаблонов
 def initialize_data_files() -> Dict[str, str]:
     """
     Проверяет наличие файлов данных. Если файл отсутствует,
     копирует его из шаблона (.example).
-    
-    Returns:
-        Словарь с результатами: {"created": [...], "skipped": [...], "errors": [...]}
     """
     ensure_dirs_exist()
     
     results = {"created": [], "skipped": [], "errors": []}
     
-    # Список файлов для инициализации: (целевой путь, шаблон)
     files_to_init = [
         (USER_PREFS_FILE, USER_PREFS_TEMPLATE),
         (WISHLIST_FILE, WISHLIST_TEMPLATE)
     ]
     
     for target_path, template_path in files_to_init:
-        # Если файл уже существует — пропускаем
         if target_path.exists():
             results["skipped"].append(str(target_path.name))
             continue
-        
-        # Если шаблона нет — ошибка
+
         if not template_path.exists():
             results["errors"].append(f"Template not found: {template_path.name}")
             continue

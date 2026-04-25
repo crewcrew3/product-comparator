@@ -1,14 +1,11 @@
 """
-tools/wishlist.py
 Управление списком желаний (wishlist.md).
 """
 
 from typing import Dict, List, Any
 from .base import WISHLIST_FILE, load_markdown_file, append_to_markdown_file, get_current_timestamp
 
-
 def load_wishlist() -> List[Dict[str, Any]]:
-    """Загружает вишлист из файла."""
     content = load_markdown_file(WISHLIST_FILE)
     if not content:
         return []
@@ -54,8 +51,6 @@ def check_wishlist_duplicate(product_name: str) -> bool:
 
 def add_to_wishlist(entry_data: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Добавляет товар в вишлист.
-    
     Args:
         entry_data: Словарь с данными из WishlistAgent (wishlist_entry)
     """

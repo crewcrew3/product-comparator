@@ -34,11 +34,7 @@ def create_wishlist_llm() -> ChatOllama:
 
 
 def run_wishlist(state: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Основная функция агента.
-    Читает product_names из state, проверяет дубликат, загружает данные,
-    вызывает LLM для форматирования записи и возвращает результат.
-    """
+
     product_names = state.get("product_names", [])
     
     if len(product_names) != 1:
@@ -57,7 +53,7 @@ def run_wishlist(state: Dict[str, Any]) -> Dict[str, Any]:
             "wishlist_error_message": f"Товар '{product_name}' уже есть в вишлисте."
         }
 
-    # Загрузка характеристик и предпочтений
+
     specs = load_product_specs(product_name)
     user_prefs = load_user_preferences()
     current_wishlist = load_wishlist()
@@ -65,7 +61,6 @@ def run_wishlist(state: Dict[str, Any]) -> Dict[str, Any]:
     # Подготовка текста характеристик для промпта
     specs_text = format_specs_for_prompt(specs) if specs else "Характеристики не найдены в базе."
 
-    # Загрузка системного промпта
     prompts = load_prompts()
     system_prompt = prompts.get("wishlist", {}).get("system", "")
     if not system_prompt:
@@ -74,13 +69,11 @@ def run_wishlist(state: Dict[str, Any]) -> Dict[str, Any]:
     # Экранирование фигурных скобок для LangChain
     system_prompt = system_prompt.replace("{", "{{").replace("}", "}}")
 
-    # Шаблон промпта с точными переменными из prompts.yaml
     prompt = ChatPromptTemplate.from_messages([
         ("system", system_prompt),
         ("human", "Название товара: {product_name}\n\nХарактеристики из базы: {specs}\n\nТекущий вишлист: {current_wishlist}\n\nПредпочтения пользователя: {user_prefs}")
     ])
 
-    # Выполнение запроса
     llm = create_wishlist_llm()
     chain = prompt | llm
 
@@ -99,7 +92,6 @@ def run_wishlist(state: Dict[str, Any]) -> Dict[str, Any]:
             "wishlist_error_message": str(e)
         }
 
-    # Если модель вернула ошибку в поле error
     if parsed.get("error"):
         return {
             "wishlist_entry": None,
@@ -116,7 +108,6 @@ def run_wishlist(state: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def parse_json_response(text: str) -> Dict[str, Any]:
-    """Парсит ответ LLM, удаляет markdown-обёртки, возвращает словарь."""
     cleaned = text.strip()
     if cleaned.startswith("```json"):
         cleaned = cleaned[7:]

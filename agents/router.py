@@ -23,20 +23,18 @@ from tools import load_user_preferences, update_user_preferences
 OLLAMA_MODEL = "qwen2.5:3b"
 # OLLAMA_BASE_URL = "http://host.docker.internal:11434"
 OLLAMA_BASE_URL = "http://localhost:11434"
-OLLAMA_TEMPERATURE = 0.1  # Низкая температура для детерминированного вывода
-OLLAMA_FORMAT = "json"  # Требование строгого JSON-вывода
-
+OLLAMA_TEMPERATURE = 0.1
+OLLAMA_FORMAT = "json"
 
 def create_router_llm() -> ChatOllama:
     return ChatOllama(
         model=OLLAMA_MODEL,
         base_url=OLLAMA_BASE_URL,
         temperature=OLLAMA_TEMPERATURE,
-        format=OLLAMA_FORMAT,  # Включает режим строгого JSON
+        format=OLLAMA_FORMAT,
         num_ctx=4096,  # Размер контекстного окна
-        keep_alive="0s"
+        keep_alive="0s" # Выгружаем модель сразу чтобы мой ноут не умер
     )
-
 
 def create_router_prompt(system_prompt: str) -> ChatPromptTemplate:
     """
@@ -53,8 +51,6 @@ def create_router_prompt(system_prompt: str) -> ChatPromptTemplate:
         ("human", "{user_input}"),
     ])
 
-
-# Основная функция агента
 def run_router(state: Dict[str, Any]) -> Dict[str, Any]:
     """
     Главный входной пункт агента Router.
@@ -73,7 +69,6 @@ def run_router(state: Dict[str, Any]) -> Dict[str, Any]:
             - router_error: Optional[str], код ошибки если есть
             - router_error_message: Optional[str], сообщение для пользователя если есть
     """
-    # Извлекаем входные данные из состояния
     user_input = state.get("user_input", "").strip()
     
     if not user_input:
@@ -85,7 +80,6 @@ def run_router(state: Dict[str, Any]) -> Dict[str, Any]:
             "router_error_message": "Пожалуйста, введите запрос.",
         }
     
-    # Загружаем промпты
     prompts = load_prompts()
     system_prompt = prompts.get("router", {}).get("system", "")
     
@@ -93,25 +87,21 @@ def run_router(state: Dict[str, Any]) -> Dict[str, Any]:
         system_prompt = "Ты — маршрутизатор. Определи намерение пользователя и верни JSON."
     
     # LangChain парсит {} как переменные. JSON-примеры в промпте ломают парсер.
-    # Заменяем { на {{ и } на }}, чтобы они воспринимались какliteral текст.
+    # Заменяем { на {{ и } на }}, чтобы они воспринимались как текст.
     system_prompt = system_prompt.replace("{", "{{").replace("}", "}}")
     
     llm = create_router_llm()
     prompt = create_router_prompt(system_prompt)
     
-    # Передай вывод первого компонента на вход второму
+    # | - передай вывод первого компонента на вход второму
     chain = prompt | llm
     
-    # Выполняем запрос к модели
     try:
         response = chain.invoke({
             "user_input": user_input,
         })
         
-        # Извлекаем текст ответа
         response_content = response.content.strip()
-        
-        # Парсим JSON-ответ
         parsed_response = parse_router_response(response_content)
         
     except Exception as e:
@@ -132,8 +122,7 @@ def run_router(state: Dict[str, Any]) -> Dict[str, Any]:
             "router_error": parsed_response["error"],
             "router_error_message": parsed_response.get("error_message", "Произошла ошибка при анализе запроса."),
         }
-    
-    # Обработка намерения update_prefs
+
     if parsed_response["intent"] == "update_prefs":
         prefs_result = handle_prefs_update(parsed_response.get("parsed_params", {}))
         
@@ -153,8 +142,7 @@ def run_router(state: Dict[str, Any]) -> Dict[str, Any]:
             "router_error": None,
             "router_error_message": prefs_result["message"],
         }
-    
-    # Валидация количества товаров для compare
+
     if parsed_response["intent"] in ("compare", "compare_and_export"):
         product_count = len(parsed_response.get("product_names", []))
         
@@ -166,8 +154,7 @@ def run_router(state: Dict[str, Any]) -> Dict[str, Any]:
                 "router_error": "invalid_product_count",
                 "router_error_message": "Для сравнения укажите ровно 2 товара.",
             }
-    
-    # Валидация количества товаров для wishlist
+        
     if parsed_response["intent"] == "wishlist":
         product_count = len(parsed_response.get("product_names", []))
         
@@ -192,15 +179,9 @@ def run_router(state: Dict[str, Any]) -> Dict[str, Any]:
 # Вспомогательные функции
 def parse_router_response(response_text: str) -> Dict[str, Any]:
     """
-    Парсит ответ LLM в словарь.
-    
-    Args:
-        response_text: Сырой текст ответа от модели
-    
-    Returns:
-        Словарь с полями intent, product_names, parsed_params, error, error_message
+    Парсит ответ LLM, которая должна была вернуть джисон с полями intent, product_names, parsed_params, error, error_message, в словарь.
     """
-    # Очистка от markdown-форматирования (если модель добавила ```json ... ```)
+
     cleaned = response_text.strip()
     if cleaned.startswith("```json"):
         cleaned = cleaned[7:]
@@ -222,13 +203,11 @@ def parse_router_response(response_text: str) -> Dict[str, Any]:
     try:
         parsed = json.loads(cleaned)
         
-        # Валидация обязательных полей
         required_fields = ["intent", "product_names", "parsed_params", "error", "error_message"]
         for field in required_fields:
             if field not in parsed:
                 parsed[field] = default_result[field]
         
-        # Нормализация типов
         if not isinstance(parsed["product_names"], list):
             parsed["product_names"] = []
         if not isinstance(parsed["parsed_params"], dict):
@@ -243,21 +222,10 @@ def parse_router_response(response_text: str) -> Dict[str, Any]:
 
 
 def handle_prefs_update(params: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Обрабатывает обновление предпочтений через tools.preferences.
-    
-    Args:
-        params: Словарь параметров из Router (parsed_params)
-    
-    Returns:
-        Словарь с результатом: {"success": bool, "message": str}
-    """
     if not params:
         return {"success": False, "message": "Не указаны параметры для обновления."}
     
-    # Вызываем функцию из tools.preferences
-    result = update_user_preferences(params)
-    
+    result = update_user_preferences(params) # этот метод тоже возвращает джисон с success
     return {
         "success": result.get("success", False),
         "message": result.get("message", "Неизвестная ошибка")
@@ -265,7 +233,6 @@ def handle_prefs_update(params: Dict[str, Any]) -> Dict[str, Any]:
 
 # Функция для отладки (запуск напрямую)
 if __name__ == "__main__":
-    # Тестовые запросы для проверки работы Router
     test_queries = [
         "Сравни iPhone 15 и Samsung S24",
         "Сравни ноутбуки ASUS и Lenovo, сохрани результат в файл",

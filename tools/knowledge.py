@@ -1,11 +1,9 @@
 """
-tools/knowledge.py
 Работа с базой знаний (knowledge/). Поиск товаров и характеристик.
 """
 
 from typing import Dict, List, Optional, Any
 from .base import KNOWLEDGE_DIR, load_markdown_file
-
 
 def load_product_specs(product_name: str, category: Optional[str] = None) -> Optional[Dict[str, Any]]:
     """
@@ -61,11 +59,6 @@ def load_product_specs(product_name: str, category: Optional[str] = None) -> Opt
 
 
 def list_available_products(category: Optional[str] = None) -> List[str]:
-    """
-    Возвращает список товаров в базе.
-     
-    category: Опциональная категория для фильтрации
-    """
     products = []
     if category:
         files_to_check = [KNOWLEDGE_DIR / f"{category.strip().lower()}.md"]
