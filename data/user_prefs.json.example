@@ -1,0 +1,16 @@
+{
+  "user_id": "default",
+  "budget": null,
+  "currency": "RUB",
+  "preferred_brands": [],
+  "avoided_brands": [],
+  "feature_priority": ["battery", "memory", "camera", "price"],
+  "min_rating": 4.0,
+  "last_updated": "2026-04-24T00:00:00Z",
+  "settings": {
+    "language": "ru",
+    "export_format": "markdown",
+    "auto_save_wishlist": false
+  },
+  "_instructions": "Не изменяйте структуру JSON. Для обновления предпочтений пишите в чат: 'Установи бюджет: 50000', 'Приоритет: камера > память', 'Добавь предпочитаемый бренд: Samsung', 'Добавь избегаемый бренд: Apple', 'Сбросить настройки'. Поля с null или пустыми массивами игнорируются агентом."
+}
