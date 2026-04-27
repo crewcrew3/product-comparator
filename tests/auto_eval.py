@@ -5,9 +5,6 @@ import pandas as pd
 import time
 import requests
 
-# гемма e2b быстро думает, с форматом ок и с аргументацией тоже.
-# Квен2.5 быстро думает с форматом ок но с аргументацией в пролете.
-# квен 3.5 ??? 
 MODELS = ["gemma4:e2b", "qwen2.5:3b", "qwen3.5:2b", "gemma3:4b"] #"gemma4:e2b", "qwen2.5:3b", "qwen3.5:2b", "gemma3:4b"
 RUNS_PER_PROMPT = 2
 TEMPERATURE = 0.2

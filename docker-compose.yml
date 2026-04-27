@@ -14,6 +14,9 @@ services:
       # Логи для отладки (создадутся автоматически)
       - ./logs:/app/logs
     
+    env_file:
+      - .env
+
     # переменные окружения
     environment:
       - OLLAMA_HOST=host.docker.internal:11434
@@ -34,3 +37,48 @@ services:
     # стандартный ввод-вывод для интерактивного режима, если смы хотим вводить команды в агент
     stdin_open: true
     tty: true
+
+  langfuse:
+    image: langfuse/langfuse:2
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/postgres
+      - NEXTAUTH_SECRET=mysecret # Секретный ключ для шифрования сессий пользователей (аутентификация в веб-интерфейсе).
+      - SALT=mysalt
+      - ENCRYPTION_KEY=0000000000000000000000000000000000000000000000000000000000000000
+      - NEXTAUTH_URL=http://localhost:3000 # Публичный URL, по которому доступен веб-интерфейс.
+      - TELEMETRY_ENABLED=false
+    restart: unless-stopped
+
+  db:
+    image: postgres:17
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+    ports:
+      - "5432:5432"
+    # database_data — имя именованного тома (объявляется в конце файла).
+    # /var/lib/postgresql/data — путь внутри контейнера, где PostgreSQL хранит файлы базы.
+    # Зачем: Без этого все данные удалятся при удалении контейнера. С томом данные переживают пересоздание контейнеров.
+    volumes:
+      - database_data:/var/lib/postgresql/data
+    healthcheck:
+    # Команда для проверки готовности базы.
+    # pg_isready — утилита PostgreSQL, которая пытается подключиться и возвращает статус.
+    # -U postgres — подключаться под пользователем postgres.
+    # Если команда возвращает 0 — контейнер считается healthy.
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s # Как часто запускать healthcheck
+      timeout: 3s # Максимальное время выполнения команды проверки. Если pg_isready не ответит за 3 секунды — проверка считается проваленной.
+      retries: 10 # Сколько раз подряд должна провалиться проверка, чтобы контейнер считался unhealthy.
+      start_period: 30s
+    restart: unless-stopped
+
+volumes:
+  database_data:
+    driver: local
