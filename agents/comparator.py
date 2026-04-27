@@ -5,6 +5,7 @@
 """
 
 import json
+import logging
 from typing import Dict, Any
 from langchain_ollama import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate
@@ -36,17 +37,20 @@ def run_comparator(state: Dict[str, Any]) -> Dict[str, Any]:
     product_names = state.get("product_names", [])
     
     if len(product_names) != 2:
+        logging.warning(f"Comparator: invalid input, expected 2 products, got {len(product_names)}")
         return {
             "comparison_data": None,
             "comparator_error": "invalid_input",
             "comparator_error_message": "Агенту передано неверное количество товаров."
         }
     
+    logging.info(f"Comparator: loading specs for {product_names}")
     specs_a = load_product_specs(product_names[0])
     specs_b = load_product_specs(product_names[1])
 
     if not specs_a or not specs_b:
         missing = [name for name, spec in zip(product_names, [specs_a, specs_b]) if not spec]
+        logging.warning(f"Comparator: products not found in knowledge base: {missing}")
         return {
             "comparison_data": None,
             "comparator_error": "product_not_found",
@@ -80,6 +84,7 @@ def run_comparator(state: Dict[str, Any]) -> Dict[str, Any]:
     chain = prompt | llm
 
     try:
+        logging.debug(f"Comparator: invoking LLM with model {OLLAMA_MODEL}")
         response = chain.invoke({
             "specs_a": specs_text_a,
             "specs_b": specs_text_b,
@@ -87,6 +92,7 @@ def run_comparator(state: Dict[str, Any]) -> Dict[str, Any]:
         })
         parsed = parse_json_response(response.content)
     except Exception as e:
+        logging.error(f"Comparator: LLM execution failed: {e}", exc_info=True)
         return {
             "comparison_data": None,
             "comparator_error": "llm_execution_failed",
@@ -94,12 +100,14 @@ def run_comparator(state: Dict[str, Any]) -> Dict[str, Any]:
         }
     
     if parsed.get("error"):
+        logging.warning(f"Comparator: parsed response contains error: {parsed['error']}")
         return {
             "comparison_data": None,
             "comparator_error": parsed["error"],
             "comparator_error_message": parsed.get("error_message", "Ошибка генерации сравнения")
         }
 
+    logging.info(f"Comparator: successfully generated comparison, winner={parsed.get('winner')}")
     return {
         "comparison_data": parsed,
         "comparator_error": None,
@@ -132,6 +140,8 @@ def parse_json_response(text: str) -> Dict[str, Any]:
         for key in default:
             if key not in parsed:
                 parsed[key] = default[key]
+        logging.debug(f"parse_json_response: successfully parsed, keys={list(parsed.keys())}")
         return parsed
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as e:
+        logging.warning(f"parse_json_response: JSON decode failed: {e}")
         return default

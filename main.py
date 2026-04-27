@@ -70,6 +70,7 @@ def main():
     while True:
         try:
             user_input = input("\nВведите запрос (или 'exit' для выхода): ").strip()
+            logging.info(f"User input: {user_input[:100]}")
             
             if not user_input:
                 continue
@@ -212,7 +213,7 @@ def main():
                     )
                 wish_gen.end()
                 logging.debug(f"WishlistAgent span closed: entry_created={bool(wish_entry)}")
-                
+
             output = result.get("final_output", "Нет ответа")
             product_count = len(result.get("product_names", []))
 

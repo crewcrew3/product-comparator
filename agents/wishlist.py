@@ -5,6 +5,7 @@
 """
 
 import json
+import logging
 from typing import Dict, Any
 from langchain_ollama import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate
@@ -38,6 +39,7 @@ def run_wishlist(state: Dict[str, Any]) -> Dict[str, Any]:
     product_names = state.get("product_names", [])
     
     if len(product_names) != 1:
+        logging.warning(f"WishlistAgent: invalid input, expected 1 product, got {len(product_names)}")
         return {
             "wishlist_entry": None,
             "wishlist_error": "invalid_input",
@@ -45,15 +47,17 @@ def run_wishlist(state: Dict[str, Any]) -> Dict[str, Any]:
         }
 
     product_name = product_names[0]
+    logging.info(f"WishlistAgent: processing product '{product_name}'")
 
     if check_wishlist_duplicate(product_name):
+        logging.warning(f"WishlistAgent: product '{product_name}' already in wishlist")
         return {
             "wishlist_entry": None,
             "wishlist_error": "already_in_wishlist",
             "wishlist_error_message": f"Товар '{product_name}' уже есть в вишлисте."
         }
 
-
+    logging.debug(f"WishlistAgent: loading specs, preferences and wishlist")
     specs = load_product_specs(product_name)
     user_prefs = load_user_preferences()
     current_wishlist = load_wishlist()
@@ -78,6 +82,7 @@ def run_wishlist(state: Dict[str, Any]) -> Dict[str, Any]:
     chain = prompt | llm
 
     try:
+        logging.debug(f"WishlistAgent: invoking LLM with model {OLLAMA_MODEL}")
         response = chain.invoke({
             "product_name": product_name,
             "specs": specs_text,
@@ -86,6 +91,7 @@ def run_wishlist(state: Dict[str, Any]) -> Dict[str, Any]:
         })
         parsed = parse_json_response(response.content)
     except Exception as e:
+        logging.error(f"WishlistAgent: LLM execution failed: {e}", exc_info=True)
         return {
             "wishlist_entry": None,
             "wishlist_error": "llm_failed",
@@ -93,6 +99,7 @@ def run_wishlist(state: Dict[str, Any]) -> Dict[str, Any]:
         }
 
     if parsed.get("error"):
+        logging.warning(f"WishlistAgent: parsed response contains error: {parsed['error']}")
         return {
             "wishlist_entry": None,
             "wishlist_error": parsed["error"],
@@ -100,6 +107,7 @@ def run_wishlist(state: Dict[str, Any]) -> Dict[str, Any]:
         }
 
     # Успешный результат
+    logging.info(f"WishlistAgent: successfully generated wishlist entry for '{product_name}'")
     return {
         "wishlist_entry": parsed.get("wishlist_entry"),
         "wishlist_error": None,
@@ -128,6 +136,8 @@ def parse_json_response(text: str) -> Dict[str, Any]:
         for key in default:
             if key not in parsed:
                 parsed[key] = default[key]
+        logging.debug(f"parse_json_response: successfully parsed wishlist entry")
         return parsed
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as e:
+        logging.warning(f"parse_json_response: JSON decode failed: {e}")
         return default

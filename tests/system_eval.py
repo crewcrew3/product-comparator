@@ -216,7 +216,7 @@ def main():
         print(f"[{i}/{len(dataset)}] {test['user_input'][:40]}...", end=" ")
         result = run_single_eval(test)
         results.append(result)
-        status = "✅" if result["task_success"] else "❌"
+        status = "[PASSED]" if result["task_success"] else "[FAILED]"
         print(f"{status} {result['latency_sec']}с")
     
     # Считаем метрики

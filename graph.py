@@ -3,6 +3,7 @@
 Определяет состояние (State), узлы (Nodes) и маршрутизацию (Edges).
 """
 
+import logging
 from typing import TypedDict, Optional, List, Dict, Any
 from langgraph.graph import StateGraph, START, END
 
@@ -43,17 +44,23 @@ class ProductComparisonState(TypedDict):
 
 # Узлы графа
 def router_node(state: ProductComparisonState) -> Dict[str, Any]:
+    logging.debug("router_node: executing run_router")
     result = run_router(state)
+    logging.info(f"router_node: completed, intent={result.get('parsed_intent')}, error={result.get('router_error')}")
     return result
 
 
 def comparator_node(state: ProductComparisonState) -> Dict[str, Any]:
+    logging.debug("comparator_node: executing run_comparator")
     result = run_comparator(state)
+    logging.info(f"comparator_node: completed, error={result.get('comparator_error')}")
     return result
 
 
 def wishlist_agent_node(state: ProductComparisonState) -> Dict[str, Any]:
+    logging.debug("wishlist_agent_node: executing run_wishlist")
     result = run_wishlist(state)
+    logging.info(f"wishlist_agent_node: completed, error={result.get('wishlist_error')}")
     return result
 
 
@@ -63,11 +70,13 @@ def action_node(state: ProductComparisonState) -> Dict[str, Any]:
     Вызывается ПОСЛЕ того, как агент успешно вернул данные.
     """
     intent = state.get("parsed_intent")
+    logging.debug(f"action_node: executing for intent '{intent}'")
     
     # Логика экспорта отчета
     if intent == "compare_and_export":
         data = state.get("comparison_data")
         if data and data.get("comparison_table"):
+            logging.info("action_node: exporting comparison report")
             # Формируем Markdown-строку из данных сравнения
             md_content = format_comparison_to_markdown(data)
             table_data = data.get("comparison_table", {})
@@ -81,6 +90,7 @@ def action_node(state: ProductComparisonState) -> Dict[str, Any]:
     elif intent == "wishlist":
         entry = state.get("wishlist_entry")
         if entry and not state.get("wishlist_error"):
+            logging.info("action_node: adding item to wishlist file")
             add_to_wishlist(entry)
             
     return {}
@@ -93,16 +103,20 @@ def response_node(state: ProductComparisonState) -> Dict[str, Any]:
     """
     # 1. Проверка ошибок 
     if state.get("router_error"):
+        logging.info("response_node: returning router error message")
         return {"final_output": state.get("router_error_message", "Ошибка маршрутизации")}
         
     if state.get("comparator_error"):
+        logging.info("response_node: returning comparator error message")
         return {"final_output": state.get("comparator_error_message", "Ошибка сравнения")}
         
     if state.get("wishlist_error"):
+        logging.info("response_node: returning wishlist error message")
         return {"final_output": state.get("wishlist_error_message", "Ошибка вишлиста")}
 
     # 2. Формирование успешного ответа
     intent = state.get("parsed_intent")
+    logging.debug(f"response_node: generating response for intent '{intent}'")
     
     if intent == "update_prefs":
         return {"final_output": state.get("router_error_message", "Настройки обновлены.")}
@@ -114,19 +128,23 @@ def response_node(state: ProductComparisonState) -> Dict[str, Any]:
             if intent == "compare_and_export":
                 response += "\n\n[Отчет успешно сохранен в файл]"
             return {"final_output": response}
+        logging.warning("response_node: compare intent but no comparison data available")
         return {"final_output": "Сравнение не удалось."}
         
     elif intent == "wishlist":
         entry = state.get("wishlist_entry")
         if entry:
             return {"final_output": f"Товар '{entry.get('name')}' добавлен в вишлист."}
+        logging.warning("response_node: wishlist intent but no entry data available")
         return {"final_output": "Не удалось добавить в вишлист."}
         
+    logging.warning(f"response_node: unknown intent '{intent}', returning default message")
     return {"final_output": "Неизвестный сценарий."}
 
 # Вспомогательные функции
 def format_comparison_to_markdown(data: Dict[str, Any]) -> str:
     """Превращает JSON-ответ Comparator в читаемый текст."""
+    logging.debug("format_comparison_to_markdown: formatting data")
     table = data.get("comparison_table", {})
     headers = table.get("headers", [])
     rows = table.get("rows", [])
@@ -154,9 +172,11 @@ def format_comparison_to_markdown(data: Dict[str, Any]) -> str:
 def route_after_router(state: ProductComparisonState) -> str:
     """Решает, куда идти после Router."""
     if state.get("router_error"):
+        logging.warning("route_after_router: error detected, routing to response")
         return "response"  # Если ошибка ввода - сразу ответ
     
     intent = state.get("parsed_intent")
+    logging.debug(f"route_after_router: routing for intent '{intent}'")
     if intent == "update_prefs":
         return "response"  # Настройки обновились в Router - сразу ответ
     elif intent in ("compare", "compare_and_export"):
@@ -170,9 +190,11 @@ def route_after_router(state: ProductComparisonState) -> str:
 def route_after_comparator(state: ProductComparisonState) -> str:
     """Решает, куда идти после Comparator."""
     if state.get("comparator_error"):
+        logging.warning("route_after_comparator: error detected, routing to response")
         return "response"  # Ошибка сравнения - ответ
     
     intent = state.get("parsed_intent")
+    logging.debug(f"route_after_comparator: routing for intent '{intent}'")
     if intent == "compare_and_export":
         return "action"  # Успешно сравнили + нужно экспортировать
     else:
@@ -181,17 +203,20 @@ def route_after_comparator(state: ProductComparisonState) -> str:
 
 def route_after_wishlist(state: ProductComparisonState) -> str:
     """Решает, куда идти после WishlistAgent."""
+    logging.debug("route_after_wishlist: routing to action")
     # Всегда идем в action, чтобы попытаться сохранить в файл
     return "action"
 
 
 def route_after_action(state: ProductComparisonState) -> str:
     """После действий всегда идем к ответу."""
+    logging.debug("route_after_action: routing to response")
     return "response"
 
 # Собираем граф
 def build_graph() -> StateGraph:
     """Создает и компилирует граф."""
+    logging.info("build_graph: initializing workflow")
     workflow = StateGraph(ProductComparisonState)
 
     # Добавляем узлы
@@ -227,6 +252,7 @@ def build_graph() -> StateGraph:
     workflow.add_edge("action", "response")
     workflow.add_edge("response", END)
 
+    logging.info("build_graph: workflow compiled successfully")
     return workflow.compile()
 
 # Экспортируем готовый граф для использования в main.py

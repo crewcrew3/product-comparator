@@ -24,8 +24,8 @@ LANGFUSE_SECRET_KEY = os.getenv("LANGFUSE_SECRET_KEY", "")
 # Пороги для алертов
 THRESHOLDS = {
     "max_latency_sec": 200.0,          # Алерт, если задержка > 200с
-    "max_system_error_rate": 0.1,     # Алерт, если > 30% запросов с ошибкой
-    "consecutive_system_errors": 3,  # Алерт после 3 ошибок "товар не найден" подряд
+    "max_system_error_rate": 0.2,     # Алерт, если > 20% запросов с ошибкой
+    "consecutive_system_errors": 3,  # Алерт после 3 системных ошибок 
 }
 
 # Явное разделение типов ошибок

@@ -2,6 +2,7 @@
 Управление предпочтениями пользователя (бюджет, бренды, приоритеты).
 """
 
+import logging
 from datetime import datetime, timezone
 from typing import Dict, Any
 from .base import USER_PREFS_FILE, load_json_file, save_json_file
@@ -37,11 +38,13 @@ DEFAULT_PREFS = {
 
 
 def load_user_preferences() -> Dict[str, Any]:
+    logging.debug("load_user_preferences: loading preferences from file")
     prefs = load_json_file(USER_PREFS_FILE, default={})
     # Гарантируем наличие всех полей
     for key, value in DEFAULT_PREFS.items():
         if key not in prefs:
             prefs[key] = value
+    logging.debug(f"load_user_preferences: loaded and merged {len(prefs)} preference fields")
     return prefs
 
 
@@ -52,6 +55,7 @@ def normalize_params(params: Dict[str, Any]) -> Dict[str, Any]:
     Приводит ключи к lowercase с подчёркиваниями,
     убирает лишние пробелы в значениях.
     """
+    logging.debug(f"normalize_params: normalizing {len(params)} parameters")
     normalized = {}
     for key, value in params.items():
         # Нормализация ключа
@@ -80,11 +84,13 @@ def normalize_params(params: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def update_user_preferences(params: Dict[str, Any]) -> Dict[str, Any]:
+    logging.info(f"update_user_preferences: received raw params: {list(params.keys())}")
     params = normalize_params(params)
     prefs = load_user_preferences()
     
     # Сброс
     if params.get("reset") is True:
+        logging.info("update_user_preferences: reset to defaults requested")
         prefs = DEFAULT_PREFS.copy()
         prefs["last_updated"] = datetime.now(timezone.utc).isoformat()
         save_json_file(USER_PREFS_FILE, prefs)
@@ -95,25 +101,33 @@ def update_user_preferences(params: Dict[str, Any]) -> Dict[str, Any]:
         if key == "reset":
             continue
         if key not in VALID_PREFS_FIELDS:
+            logging.warning(f"update_user_preferences: invalid parameter '{key}'")
             return {"success": False, "message": f"Недопустимый параметр: {key}", "updated_prefs": prefs}
         
         expected_type = VALID_PREFS_FIELDS[key]
         if not isinstance(value, expected_type):
+            logging.warning(f"update_user_preferences: invalid type for '{key}' (expected {expected_type.__name__})")
             return {"success": False, "message": f"Неверный тип для {key}", "updated_prefs": prefs}
         
         if key == "feature_priority":
             invalid = set(value) - VALID_FEATURE_PRIORITIES
             if invalid:
+                logging.warning(f"update_user_preferences: invalid features requested: {invalid}")
                 return {"success": False, "message": f"Недопустимые характеристики: {invalid}", "updated_prefs": prefs}
             prefs[key] = value
         elif key == "budget" and value < 0:
+            logging.warning(f"update_user_preferences: negative budget value '{value}'")
             return {"success": False, "message": "Бюджет не может быть отрицательным", "updated_prefs": prefs}
         elif key == "min_rating" and not (0 <= value <= 5):
+            logging.warning(f"update_user_preferences: out-of-range rating value '{value}'")
             return {"success": False, "message": "Рейтинг должен быть от 0 до 5", "updated_prefs": prefs}
         else:
             prefs[key] = value
             
     prefs["last_updated"] = datetime.now(timezone.utc).isoformat()
+    logging.debug(f"update_user_preferences: saving updated preferences with keys: {list(prefs.keys())}")
     if save_json_file(USER_PREFS_FILE, prefs):
+        logging.info("update_user_preferences: preferences saved successfully")
         return {"success": True, "message": "Предпочтения обновлены", "updated_prefs": prefs}
+    logging.error("update_user_preferences: failed to save preferences file to disk")
     return {"success": False, "message": "Ошибка сохранения", "updated_prefs": prefs}

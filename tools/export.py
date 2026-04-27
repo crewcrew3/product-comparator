@@ -3,6 +3,7 @@
 """
 
 import csv
+import logging
 from datetime import datetime
 from typing import Dict, Any, Optional
 from .base import REPORTS_DIR, ensure_dirs_exist
@@ -13,16 +14,20 @@ def export_report_as_markdown(content: str, filename: Optional[str] = None) -> D
         filename = f"report_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     filepath = REPORTS_DIR / f"{filename}.md"
     
+    logging.debug(f"export_report_as_markdown: preparing to save {filepath}")
     try:
         with open(filepath, "w", encoding="utf-8") as f:
             f.write(content)
+        logging.info(f"export_report_as_markdown: saved {filepath.name}")
         return {"success": True, "filepath": str(filepath), "message": f"Markdown сохранён: {filepath.name}"}
     except Exception as e:
+        logging.error(f"export_report_as_markdown: failed to save {filepath}: {e}")
         return {"success": False, "filepath": None, "message": f"Ошибка Markdown: {str(e)}"}
 
 
 def export_report_as_csv(table_data: Dict[str, Any], filename: Optional[str] = None) -> Dict[str, Any]:
     if not table_data or "headers" not in table_data or "rows" not in table_data:
+        logging.warning("export_report_as_csv: invalid data format, missing headers or rows")
         return {"success": False, "filepath": None, "message": "Неверный формат данных для CSV."}
     
     ensure_dirs_exist()
@@ -30,13 +35,16 @@ def export_report_as_csv(table_data: Dict[str, Any], filename: Optional[str] = N
         filename = f"report_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     filepath = REPORTS_DIR / f"{filename}.csv"
     
+    logging.debug(f"export_report_as_csv: preparing to save {filepath} with {len(table_data['rows'])} rows")
     try:
         with open(filepath, "w", encoding="utf-8", newline="") as f:
             writer = csv.writer(f)
             writer.writerow(table_data["headers"])
             writer.writerows(table_data["rows"])
+        logging.info(f"export_report_as_csv: saved {filepath.name}")
         return {"success": True, "filepath": str(filepath), "message": f"CSV сохранён: {filepath.name}"}
     except Exception as e:
+        logging.error(f"export_report_as_csv: failed to save {filepath}: {e}")
         return {"success": False, "filepath": None, "message": f"Ошибка CSV: {str(e)}"}
 
 
@@ -48,6 +56,8 @@ def export_report_to_file(table_data: Dict[str, Any], markdown_content: str, fil
     ensure_dirs_exist()
     if filename is None:
         filename = f"report_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    
+    logging.info(f"export_report_to_file: starting export with base filename '{filename}'")
     
     md_result = export_report_as_markdown(markdown_content, filename=filename)
     csv_result = export_report_as_csv(table_data, filename=filename)
@@ -61,6 +71,11 @@ def export_report_to_file(table_data: Dict[str, Any], markdown_content: str, fil
     if csv_result["success"]: messages.append(csv_result["message"])
     if not md_result["success"]: messages.append(f"[MD] {md_result['message']}")
     if not csv_result["success"]: messages.append(f"[CSV] {csv_result['message']}")
+    
+    if files_created:
+        logging.info(f"export_report_to_file: created files: {', '.join(files_created)}")
+    else:
+        logging.warning(f"export_report_to_file: failed to create any files")
     
     return {
         "success": len(files_created) > 0, # Успех, если создан хотя бы один файл

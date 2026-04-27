@@ -154,7 +154,7 @@ for model in MODELS:
                     "Duration_sec": round(duration, 2),
                     "Response": raw_text.replace("\n", " | ")
                 })
-                print(" ✅" if passed else " ❌")
+                print("[PASSED]" if passed else "[FAILED]")
                 
             except requests.exceptions.Timeout:
                 print(f" ⏱️ (модель не ответила за 30 сек)")

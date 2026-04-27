@@ -12,6 +12,7 @@
 
 import json
 import re
+import logging
 from typing import Dict, Any, Optional
 from langchain_ollama import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -72,6 +73,7 @@ def run_router(state: Dict[str, Any]) -> Dict[str, Any]:
     user_input = state.get("user_input", "").strip()
     
     if not user_input:
+        logging.warning("Router: empty input received")
         return {
             "parsed_intent": "unknown",
             "product_names": [],
@@ -79,6 +81,8 @@ def run_router(state: Dict[str, Any]) -> Dict[str, Any]:
             "router_error": "empty_input",
             "router_error_message": "Пожалуйста, введите запрос.",
         }
+    
+    logging.info(f"Router: processing input '{user_input[:100]}...'")
     
     prompts = load_prompts()
     system_prompt = prompts.get("router", {}).get("system", "")
@@ -97,6 +101,7 @@ def run_router(state: Dict[str, Any]) -> Dict[str, Any]:
     chain = prompt | llm
     
     try:
+        logging.debug(f"Router: invoking LLM with model {OLLAMA_MODEL}")
         response = chain.invoke({
             "user_input": user_input,
         })
@@ -105,6 +110,7 @@ def run_router(state: Dict[str, Any]) -> Dict[str, Any]:
         parsed_response = parse_router_response(response_content)
         
     except Exception as e:
+        logging.error(f"Router: LLM execution failed: {e}", exc_info=True)
         # Обработка ошибок подключения или выполнения LLM
         parsed_response = {
             "intent": "unknown",
@@ -115,6 +121,7 @@ def run_router(state: Dict[str, Any]) -> Dict[str, Any]:
         }
     
     if parsed_response.get("error"):
+        logging.warning(f"Router: parsed response contains error: {parsed_response['error']}")
         return {
             "parsed_intent": "unknown",
             "product_names": parsed_response.get("product_names", []),
@@ -124,9 +131,11 @@ def run_router(state: Dict[str, Any]) -> Dict[str, Any]:
         }
 
     if parsed_response["intent"] == "update_prefs":
+        logging.debug(f"Router: intent=update_prefs, params={parsed_response.get('parsed_params')}")
         prefs_result = handle_prefs_update(parsed_response.get("parsed_params", {}))
         
         if not prefs_result["success"]:
+            logging.warning(f"Router: prefs update failed: {prefs_result['message']}")
             return {
                 "parsed_intent": "unknown",
                 "product_names": [],
@@ -135,6 +144,7 @@ def run_router(state: Dict[str, Any]) -> Dict[str, Any]:
                 "router_error_message": prefs_result["message"],
             }
         
+        logging.info(f"Router: preferences updated successfully")
         return {
             "parsed_intent": "update_prefs",
             "product_names": [],
@@ -147,6 +157,7 @@ def run_router(state: Dict[str, Any]) -> Dict[str, Any]:
         product_count = len(parsed_response.get("product_names", []))
         
         if product_count != 2:
+            logging.warning(f"Router: compare intent but got {product_count} products (expected 2)")
             return {
                 "parsed_intent": "unknown",
                 "product_names": parsed_response.get("product_names", []),
@@ -159,6 +170,7 @@ def run_router(state: Dict[str, Any]) -> Dict[str, Any]:
         product_count = len(parsed_response.get("product_names", []))
         
         if product_count != 1:
+            logging.warning(f"Router: wishlist intent but got {product_count} products (expected 1)")
             return {
                 "parsed_intent": "unknown",
                 "product_names": parsed_response.get("product_names", []),
@@ -168,6 +180,7 @@ def run_router(state: Dict[str, Any]) -> Dict[str, Any]:
             }
     
     # Успешный результат
+    logging.info(f"Router: success, intent={parsed_response['intent']}, products={parsed_response.get('product_names')}")
     return {
         "parsed_intent": parsed_response["intent"],
         "product_names": parsed_response.get("product_names", []),
@@ -213,19 +226,21 @@ def parse_router_response(response_text: str) -> Dict[str, Any]:
         if not isinstance(parsed["parsed_params"], dict):
             parsed["parsed_params"] = {}
         
+        logging.debug(f"parse_router_response: successfully parsed, intent={parsed.get('intent')}")
         return parsed
         
     except json.JSONDecodeError as e:
-        print(f"JSON parse error: {e}")
-        print(f"Response text: {response_text[:200]}...")
+        logging.warning(f"parse_router_response: JSON decode failed: {e}")
         return default_result
 
 
 def handle_prefs_update(params: Dict[str, Any]) -> Dict[str, Any]:
     if not params:
+        logging.warning("handle_prefs_update: no parameters provided")
         return {"success": False, "message": "Не указаны параметры для обновления."}
     
     result = update_user_preferences(params) # этот метод тоже возвращает джисон с success
+    logging.debug(f"handle_prefs_update: update_user_preferences returned success={result.get('success')}")
     return {
         "success": result.get("success", False),
         "message": result.get("message", "Неизвестная ошибка")

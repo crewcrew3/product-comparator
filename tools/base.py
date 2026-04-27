@@ -5,6 +5,7 @@
 
 import json
 import shutil
+import logging
 from datetime import datetime, timezone
 from typing import Dict, List, Optional, Any
 from pathlib import Path
@@ -30,14 +31,16 @@ def load_semantic_context() -> str:
         for md_file in SEMANTICS_DIR.glob("*.md"):
             with open(md_file, "r", encoding="utf-8") as f:
                 context_parts.append(f.read())
+        logging.debug(f"load_semantic_context: loaded {len(context_parts)} semantic files")
     return "\n\n".join(context_parts) if context_parts else ""
 
 
 def ensure_dirs_exist() -> None:
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
-    TEMPLATES_DIR.mkdir(parents=True, exist_ok=True)
-    KNOWLEDGE_DIR.mkdir(parents=True, exist_ok=True)
+    dirs_to_create = [DATA_DIR, REPORTS_DIR, TEMPLATES_DIR, KNOWLEDGE_DIR]
+    for dir_path in dirs_to_create:
+        if not dir_path.exists():
+            dir_path.mkdir(parents=True, exist_ok=True)
+            logging.debug(f"ensure_dirs_exist: created directory {dir_path}")
 
 
 def load_json_file(filepath: Path, default: Optional[Dict] = None) -> Dict:
@@ -45,11 +48,13 @@ def load_json_file(filepath: Path, default: Optional[Dict] = None) -> Dict:
         default = {}
     try:
         with open(filepath, "r", encoding="utf-8") as f:
+            logging.debug(f"load_json_file: loaded {filepath}")
             return json.load(f)
     except FileNotFoundError:
+        logging.debug(f"load_json_file: file not found {filepath}, using default")
         return default
     except json.JSONDecodeError as e:
-        print(f"Warning: JSON decode error in {filepath}: {e}")
+        logging.warning(f"load_json_file: JSON decode error in {filepath}: {e}")
         return default
 
 
@@ -57,20 +62,23 @@ def save_json_file(filepath: Path, data: Dict) -> bool:
     try:
         with open(filepath, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
+        logging.debug(f"save_json_file: saved {filepath}")
         return True
     except Exception as e:
-        print(f"Error saving {filepath}: {e}")
+        logging.error(f"save_json_file: error saving {filepath}: {e}")
         return False
 
 
 def load_markdown_file(filepath: Path) -> str:
     try:
         with open(filepath, "r", encoding="utf-8") as f:
+            logging.debug(f"load_markdown_file: loaded {filepath}")
             return f.read()
     except FileNotFoundError:
+        logging.debug(f"load_markdown_file: file not found {filepath}")
         return ""
     except Exception as e:
-        print(f"Error reading {filepath}: {e}")
+        logging.warning(f"load_markdown_file: error reading {filepath}: {e}")
         return ""
 
 
@@ -79,9 +87,10 @@ def append_to_markdown_file(filepath: Path, content: str) -> bool:
     try:
         with open(filepath, "a", encoding="utf-8") as f:
             f.write(content + "\n")
+        logging.debug(f"append_to_markdown_file: appended to {filepath}")
         return True
     except Exception as e:
-        print(f"Error appending to {filepath}: {e}")
+        logging.error(f"append_to_markdown_file: error appending to {filepath}: {e}")
         return False
 
 def initialize_data_files() -> Dict[str, str]:
@@ -101,20 +110,24 @@ def initialize_data_files() -> Dict[str, str]:
     for target_path, template_path in files_to_init:
         if target_path.exists():
             results["skipped"].append(str(target_path.name))
+            logging.debug(f"initialize_data_files: skipped {target_path.name} (already exists)")
             continue
 
         if not template_path.exists():
-            results["errors"].append(f"Template not found: {template_path.name}")
+            error_msg = f"Template not found: {template_path.name}"
+            results["errors"].append(error_msg)
+            logging.error(f"initialize_data_files: {error_msg}")
             continue
         
         try:
             # Копируем шаблон в целевую папку
             shutil.copy2(template_path, target_path)
             results["created"].append(str(target_path.name))
-            print(f"Initialized: {target_path.name}")
+            logging.info(f"initialize_data_files: initialized {target_path.name}")
         except Exception as e:
-            results["errors"].append(f"{target_path.name}: {str(e)}")
-            print(f"Error initializing {target_path.name}: {e}")
+            error_msg = f"{target_path.name}: {str(e)}"
+            results["errors"].append(error_msg)
+            logging.error(f"initialize_data_files: error initializing {target_path.name}: {e}")
     
     return results
 
@@ -124,3 +137,4 @@ def get_current_timestamp() -> str:
 
 # Инициализация папок при импорте
 ensure_dirs_exist()
+logging.debug("tools.base: module initialized")
