@@ -16,8 +16,8 @@ from tools.preferences import load_user_preferences
 from tools.base import load_semantic_context
 
 OLLAMA_MODEL = "gemma4:e2b"
-# OLLAMA_BASE_URL = "http://host.docker.internal:11434"
-OLLAMA_BASE_URL = "http://localhost:11434"
+OLLAMA_BASE_URL = "http://host.docker.internal:11434"
+# OLLAMA_BASE_URL = "http://localhost:11434"
 OLLAMA_TEMPERATURE = 0.1
 OLLAMA_FORMAT = "json"
 
@@ -70,6 +70,33 @@ def run_comparator(state: Dict[str, Any]) -> Dict[str, Any]:
     semantic_context = load_semantic_context()
     if semantic_context:
         system_prompt += "\n\n## СПРАВОЧНЫЙ КОНТЕКСТ (ДОМЕННЫЕ ЗНАНИЯ)\n" + semantic_context
+
+    from tools.skills import load_skills_context
+
+    # Собираем триггеры из предпочтений пользователя
+    skill_triggers = []
+    # Триггеры для budget_logic
+    if user_prefs.get("budget") is not None:
+        skill_triggers.extend(["бюджет", "цена", "превышает", "укладывается"])
+
+    # Триггеры для feature_weighting
+    if user_prefs.get("feature_priority"):
+        skill_triggers.extend(user_prefs.get("feature_priority", []))
+
+    # Триггеры для preference_handling
+    if user_prefs.get("preferred_brands"):
+        skill_triggers.append("предпочитаемый бренд")
+    if user_prefs.get("avoided_brands"):
+        skill_triggers.append("избегаемый бренд")
+    if user_prefs.get("min_rating") is not None:
+        skill_triggers.append("рейтинг")
+    
+    if skill_triggers:
+        skills_context = load_skills_context(
+            trigger_keywords=skill_triggers,
+            agent_name="comparator"
+        )
+        system_prompt = system_prompt.replace("{skills_context}", skills_context if skills_context else "")
     
     # Экранирование фигурных скобок для LangChain (JSON-примеры в промпте ломают парсер шаблонов)
     system_prompt = system_prompt.replace("{", "{{").replace("}", "}}")

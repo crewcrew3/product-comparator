@@ -16,8 +16,8 @@ from tools.wishlist import load_wishlist, check_wishlist_duplicate
 from tools.preferences import load_user_preferences
 
 OLLAMA_MODEL = "qwen2.5:3b"
-# OLLAMA_BASE_URL = "http://host.docker.internal:11434"
-OLLAMA_BASE_URL = "http://localhost:11434"
+OLLAMA_BASE_URL = "http://host.docker.internal:11434"
+# OLLAMA_BASE_URL = "http://localhost:11434"
 OLLAMA_TEMPERATURE = 0.1
 OLLAMA_FORMAT = "json"
 
@@ -69,6 +69,18 @@ def run_wishlist(state: Dict[str, Any]) -> Dict[str, Any]:
     system_prompt = prompts.get("wishlist", {}).get("system", "")
     if not system_prompt:
         system_prompt = "Ты менеджер вишлиста. Верни строго JSON."
+    
+    from tools.skills import load_skills_context
+    
+    # Триггеры для wishlist-скилла
+    skill_triggers = ["приоритет", "важность", "добавить в вишлист"]
+    
+    if skill_triggers:
+        skills_context = load_skills_context(
+            trigger_keywords=skill_triggers,
+            agent_name="wishlist"
+        )
+        system_prompt = system_prompt.replace("{skills_context}", skills_context if skills_context else "")
     
     # Экранирование фигурных скобок для LangChain
     system_prompt = system_prompt.replace("{", "{{").replace("}", "}}")
